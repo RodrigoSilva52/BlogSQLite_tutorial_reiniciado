@@ -44,17 +44,17 @@ Criar um campo extra na página de cadastro para verificar a senha antes de real
 
 # Principais Rotas/Funcionalidades
 
-GET / sobre : Exibe o conteúdo da página “Sobre”
-GET “/” : Página inicial (index.ejs) com links para ‘/ sobre’ e ‘/ info’
-GET / info : Exibe conteúdo da página “Info”
-GET / cadastro : Exibe o formulário de cadastro de usuario
-POST / cadastro : Processa o dados do cadastro. Verifica se o usuário já existe e insere no banco de dados. Redireciona para POST / login ou para GET / register_invalid
-GET / login : Pagina de login de usuário
-POST / login : Valida o usuário com base no username e password. Se valido, cria sessão e redireciona para /dashboard caso incorreto vai para /invalid_login
-GET / logout : Encerra a sessão criada do usuário e redireciona para /. (index.ejs)
-GET / dasboard : Área restrita. Exibe todos usuários cadastrados
-GET / usuários : Renderiza a tabela parcial (usertable.ejs) com todos os users
-GET / register_failed : Mensagem de Erro ou falha no cadastro
+GET / sobre : Exibe o conteúdo da página “Sobre”  
+GET “/” : Página inicial (index.ejs) com links para ‘/ sobre’ e ‘/ info’  
+GET / info : Exibe conteúdo da página “Info”  
+GET / cadastro : Exibe o formulário de cadastro de usuario  
+POST / cadastro : Processa o dados do cadastro. Verifica se o usuário já existe e insere no banco de dados. Redireciona para POST / login ou para GET / register_invalid  
+GET / login : Pagina de login de usuário  
+POST / login : Valida o usuário com base no username e password. Se valido, cria sessão e redireciona para /dashboard caso incorreto vai para /invalid_login  
+GET / logout : Encerra a sessão criada do usuário e redireciona para /. (index.ejs)  
+GET / dasboard : Área restrita. Exibe todos usuários cadastrados  
+GET / usuários : Renderiza a tabela parcial (usertable.ejs) com todos os users  
+GET / register_failed : Mensagem de Erro ou falha no cadastro  
 GET / invalid_login : Exibe erro no login
 
 # Autor
