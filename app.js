@@ -45,6 +45,8 @@ app.use(
 // Middleware para isto, que neste caso é o express.static, que gerencia rotas estáticas
 app.use("/static", express.static(__dirname + "/static"));
 
+
+app.use(express.json());
 // Middleware para processar as requisições do Body Parameters do cliente
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -102,28 +104,53 @@ app.get("/cadastro", (req, res) => {
 
 // POST do cadastro
 app.post("/cadastro", (req, res) => {
-  console.log("POST /cadastro");
+  console.log("POST /cadastro - Recebido");
+
+  if (!req.body || Object.keys(req.body).length === 0) {
+    console.log("COrpo da requisição vazio.");
+
+    return  res.status(400).json({sucess: false, message: "Nenhum dado recebido."});
+  }
+
+  console.log("Corpo da requisição:", JSON.stringify(req.body, null, 2));
   // Linha para depurar se esta vindo dados no req.body
-  !req.body
-    ? console.log(`Body vazio: ${req.body}`)
-    : console.log(JSON.stringify(req.body));
+  
 
   const { username, password, email, celular, cpf, rg } = req.body;
   // Colocar aqui as validações e inclusão no banco de dados do cadastro do usuário
   // 1. Validar dados do usuário
   // 2. saber se ele já existe no banco
-  const query =
+
+
+  // ------ VALIDAÇÃO BÁSICA NO SERVIDOR
+  if(!username || !password || !email)
+  const checkUserQuery = 
     // "SELECT * FROM users WHERE email=? OR cpf=? OR rg=? OR username=?";
     "SELECT * FROM users WHERE username=?";
 
   // db.get(query, [email, cpf, rg, username], (err, row) => {
-  db.get(query, [username], (err, row) => {
-    if (err) throw err;
-    console.log(`LINHA RETORNADA do SELECT USER: ${JSON.stringify(row)}`);
+  db.get(checkUserQuery, [username, email], (err, row) => {
+    if (err) {
+      console.error("Erro ao consultar o banco(verificar usuário):", err.message);
+      //não envie o erro detalhado do banco para o cliente por segurança
+      return res.status(500).json({
+        sucess: false,
+        message: "Erro interno do servidor ao verificar usuário.",
+      });
+    }
+    console.log("Resultado da consulta de usuário existente:", row);
     if (row) {
-      // A variável 'row' irá retornar os dados do banco de dados,
-      // executado através do SQL, variável query
-      res.redirect("/register_failed");
+      //Usuário já existe
+      let conflictfield = "";
+      if ( row.username === username) {
+        conflictfield = "Nome de usuário";
+      } else if (row.email === email) {
+        conflictfield = "Email";
+      }
+      return res.status(409).json({
+        sucess: false,
+        message: '$(conflictfield) já cadastrado. Por favor, escolha outro.', 
+      });
     } else {
       // 3. Se usuário não existe no banco cadastrar
       const insertQuery =
@@ -131,9 +158,15 @@ app.post("/cadastro", (req, res) => {
       db.run(
         insertQuery,
         [username, password, email, celular, cpf, rg],
-        (err) => {
+        function (err) {
           // Inserir a lógica do INSERT
-          if (err) throw err;
+          if (err) {
+            console.error("Erro ao inserir usuário no banco:", err.message);
+            return res.status(500).json ({
+              sucess: false,
+              message: "erro interno do servidor ao cadastrar usuário.",
+            });
+          }
           res.redirect("/login");
         }
       );

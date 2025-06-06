@@ -8,23 +8,26 @@ const confirmarSenha = document.getElementById("confirmarSenha");
 const celular = document.getElementById("celular");
 const cpf = document.getElementById("cpf");
 const rg = document.getElementById("rg");
-const msgError = document.getElementsByClassName("msgError");
+const msgErrorElements = document.getElementsByClassName("msgError");
 
 /* ------ FUNÇÃO PARA RENDERIZAR AS DIFERENTES MENSAGENS DE ERRO! ------ */
 const createDisplayMsgError = (mensagem) => {
-  msgError[0].textContent = mensagem;
+  if (msgErrorElements.length > 0) {
+    msgErrorElements[0].textContent = mensagem;
+    msgErrorElements[0].style.display = mensagem ? "block" : "none";
+  }
 };
 /* --------------------------------------------------------------------- */
 
 /* ---------------- FUNÇÃO PARA VERIFICAR O NOME ----------------------- */
 const checkNome = () => {
   const nomeRegex = /^[A-Za-zÀ-ÿ\s]+$/;
-  return nomeRegex.test(nome.value);
+  return nomeRegex.test(nome.value.trim());
 };
 /* --------------------------------------------------------------------- */
 
 /* ---------- FUNÇÃO PARA VERIFICAR O EMAIL --------------------- */
-const checkEmail = (email) => {
+const checkEmail = (emailValue) => {
   const partesEmail = email.split("@");
 
   if (
@@ -101,20 +104,31 @@ function checkPasswordStrength(senha) {
 /* --------------------------------------------------------------------- */
 
 /* ------------- FUNÇÃO PARA VERIFICAR E ENVIAR DADOS ------------------ */
-function fetchDatas(event) {
+async function fetchDatas(event) {
   event.preventDefault();
+  createDisplayMsgError("");
 
-  if (!checkNome) {
+  if (!checkNome()) {
     createDisplayMsgError(
       "O nome não pode conter números ou caracteres especiais!"
     );
+    nome.focus();
     return;
   }
 
   if (!checkEmail(email.value)) {
     createDisplayMsgError(
-      "O nome não pode conter números ou caracteres especiais!"
+      "O e-mail digitado não é válido ou não é de um domónio permitido."
     );
+    email.focus();
+
+    return;
+  }
+
+  const senhaError = checkPasswordStrength(senha.value);
+  if (senhaError) {
+    createDisplayMsgError(senhaError);
+    senha.focus();
     return;
   }
 
@@ -123,27 +137,83 @@ function fetchDatas(event) {
     return;
   }
 
-  const senhaError = checkPasswordStrength(senha.value);
-  if (senhaError) {
-    createDisplayMsgError(senhaError);
-    return;
-  }
-
-  if (celular.value && /[A-Za-zÀ-ÿ]/.test(celular.value)) {
-    createDisplayMsgError("O telefone deve conter apenas números");
+  //validação do celular (opcional, já que a máscara tenta corrigir)
+  const celularLimpo = celular.value.replace(/\D/g, "");
+  if (celular.value && (celularLimpo.length < 10 || celularLimpo.length > 11)) {
+    createDisplayMsgError("O numero de celular parece inválido.");
     return;
   }
 
   const formData = {
-    nome: nome.value,
-    email: email.value,
-    senha: senha.value,
-    celular: celular.value,
-    cpf: cpf.value,
-    rg: rg.value,
+    //'username': representa o nome do usuário inserido pelo usúario.
+    //'.trim()' é usado para remover quaisquer espaços em brancp extras
+    //do início ou do fim da string do nome usuário.
+    username: nome.value.trim(),
+    //'email': armazena o endereço de e-mail fornecido.
+    //'.trim()' também é aplicado aqui para limpar espaços em branco
+    //desnecessário, garantido que o e-mail seja processado corretamente.
+    email: email.value.trim(),
+    //'password': contém a senha digitada pelo usuário.
+    //IMportante: a senha não deve ser "trimmed" (não se deve usar .trim())
+    //porque espaços no ínicio ou no fim podem ser intencionais e parte da senha escolhida.
+
+    password: senha.value,
+    //'celular' : guarda o número de celular do usuário.
+    //'celularLimpo' : é uma variavél que (presumivelmente) já contém o número
+    //de celular formatado apenas com dígitos, sem máscaras ou caracteres especiais
+    //É importante enviar apenas os números para facilitar o processamento no backend.
+
+    celular: celularLimpo,
+    //'cpf': contém o número do Cadastro de Pessoas Físicas(CPF),
+    //'.replace(/\D/g,"")' é usado para remover todos os caracteres
+    //que não são digitos (como pontos e hífens, comuns em máscaras de CPF),
+    //garantido que apenas os números do CPF sejam enviados.
+
+    cpf: cpf.value.replace(/\D/g, ""),
+    //'RG': Armazena o número de REGISTRO gERAL (rg) ou documento de identidade,
+    //SImilar ao CPF, '.replace(/\D/g,"")' remove quaisquer caracteres
+    //não numéricos, assegurando que apenas os digitos do RG Sejam transmitidos
+    rg: rg.value.replace(/\D/g, ""),
   };
 
-  console.log("Formulário Enviado: ", JSON.stringify(formData, null, 2));
+  console.log("Dados a serem enviados: ", JSON.stringify(formData, null, 2));
+
+  //----- INICIO DA LÓGICA DE ENVIO -----
+  try {
+    const response = await fetch("/cadastro", {
+      method: "POST", //Método HTTP
+      headers: {
+        "Content-type": "application/json", // INdicando que estamos enviado JSON
+        //'Accept': 'applacation/json' //Opcional, indica que esperamos JSON de volta
+      },
+      body: JSON.stringify(formData), //COnverte o objeto Javascript para uma string JSON
+    });
+    if (response.ok) {
+      //Verifica se a resposta do servidor foi bem-sucedida (status 2xx)
+      const result = await response.json(); // tenta parear a resposta do servidor como JSON
+      console.log("Sucesso:", result);
+      formulario.reset(); //Limpa o formulário após o sucesso
+      //createDisplayMsgError ('Cadastro realizado com sucesso! '+ (result.message || ''));
+      alert("Cadastro realiazado com sucesso! " + (result.message || ""));
+      window.location.href = "/login";
+      //redirecionar ou mostrar mensagem de sucesso mais elaborada
+    } else {
+      //O servidor respondeu com um erro (status 4xx ou 5xx)
+      const errorData = await response.json().catch(() => ({
+        message: "erro ao processar a resposta do servidor.",
+      }));
+      console.error("Error do servidor:", response.status, errorData);
+      createDisplayMsgError(
+        "Erro: $(errorData.message || response.statusText)"
+      );
+    }
+  } catch (error) {
+    //Erro de rede ou algo impediu a requisição de ser completada
+    console.error("Erro na requisição:", error);
+    createDisplayMsgError("Erro de conexão. Por favor, tente novamente.");
+  }
+
+  //----- FIM DA LÓGICA DE ENVIO ----
 }
 /* --------------------------------------------------------------------- */
 
