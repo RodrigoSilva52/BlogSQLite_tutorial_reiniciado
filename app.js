@@ -45,7 +45,6 @@ app.use(
 // Middleware para isto, que neste caso é o express.static, que gerencia rotas estáticas
 app.use("/static", express.static(__dirname + "/static"));
 
-
 app.use(express.json());
 // Middleware para processar as requisições do Body Parameters do cliente
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -53,13 +52,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Configurar EJS como o motor de visualização
 app.set("view engine", "ejs");
 
-
 const index =
   "<a href='/sobre'> Sobre </a><a href='/login'> Login </a><a href='/cadastro'> Cadastrar </a>";
 const sobre = "sobre";
 const login = 'Vc está na página "Login"<br><a href="/">Voltar</a>';
 const cadastro = 'Vc está na página "Cadastro"<br><a href="/">Voltar</a>';
-
 
 /* Método express.get necessita de dois parâmetros 
  Na ARROW FUNCTION, o primeiro são os dados do servidor (REQUISITION - 'req')
@@ -109,29 +106,43 @@ app.post("/cadastro", (req, res) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     console.log("COrpo da requisição vazio.");
 
-    return  res.status(400).json({sucess: false, message: "Nenhum dado recebido."});
+    return res
+      .status(400)
+      .json({ sucess: false, message: "Nenhum dado recebido." });
   }
 
   console.log("Corpo da requisição:", JSON.stringify(req.body, null, 2));
   // Linha para depurar se esta vindo dados no req.body
-  
 
   const { username, password, email, celular, cpf, rg } = req.body;
   // Colocar aqui as validações e inclusão no banco de dados do cadastro do usuário
   // 1. Validar dados do usuário
   // 2. saber se ele já existe no banco
 
-
   // ------ VALIDAÇÃO BÁSICA NO SERVIDOR
-  if(!username || !password || !email)
-  const checkUserQuery = 
+  if (!username || !password || !email) {
+    return res.status(400).json({
+      sucess: false,
+      message: "Nome do usuário, senha e email são obrigatorios.",
+    });
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res
+      .status(400)
+      .json({ sucess: false, message: "Formato de email inválido." });
+  }
+  const checkUserQuery =
     // "SELECT * FROM users WHERE email=? OR cpf=? OR rg=? OR username=?";
     "SELECT * FROM users WHERE username=?";
 
   // db.get(query, [email, cpf, rg, username], (err, row) => {
   db.get(checkUserQuery, [username, email], (err, row) => {
     if (err) {
-      console.error("Erro ao consultar o banco(verificar usuário):", err.message);
+      console.error(
+        "Erro ao consultar o banco(verificar usuário):",
+        err.message
+      );
       //não envie o erro detalhado do banco para o cliente por segurança
       return res.status(500).json({
         sucess: false,
@@ -142,14 +153,14 @@ app.post("/cadastro", (req, res) => {
     if (row) {
       //Usuário já existe
       let conflictfield = "";
-      if ( row.username === username) {
+      if (row.username === username) {
         conflictfield = "Nome de usuário";
       } else if (row.email === email) {
         conflictfield = "Email";
       }
       return res.status(409).json({
         sucess: false,
-        message: '$(conflictfield) já cadastrado. Por favor, escolha outro.', 
+        message: "$(conflictfield) já cadastrado. Por favor, escolha outro.",
       });
     } else {
       // 3. Se usuário não existe no banco cadastrar
@@ -162,7 +173,7 @@ app.post("/cadastro", (req, res) => {
           // Inserir a lógica do INSERT
           if (err) {
             console.error("Erro ao inserir usuário no banco:", err.message);
-            return res.status(500).json ({
+            return res.status(500).json({
               sucess: false,
               message: "erro interno do servidor ao cadastrar usuário.",
             });
@@ -182,7 +193,7 @@ app.get("/sobre", (req, res) => {
 });
 
 app.get("/logout", (req, res) => {
-  console.log("GET /logout")
+  console.log("GET /logout");
   // Exemplo de uma rota (END POINT) controlado pela sessão do usuário logado.
   req.session.destroy(() => {
     res.redirect("/");
@@ -197,12 +208,20 @@ app.get("/login", (req, res) => {
 
 app.get("/register_failed", (req, res) => {
   console.log("GET /register_failed");
-  res.render("pages/fail", { ...config, req: req, msg: "<a href='/cadastro'>Cadastro inválido</a>" });
+  res.render("pages/fail", {
+    ...config,
+    req: req,
+    msg: "<a href='/cadastro'>Cadastro inválido</a>",
+  });
 });
 
 app.get("/invalid_login", (req, res) => {
   console.log("GET /invalid_login");
-  res.render("pages/fail", { ...config, req: req, msg: "Usuário e senha inválida!!!" });
+  res.render("pages/fail", {
+    ...config,
+    req: req,
+    msg: "Usuário e senha inválida!!!",
+  });
 });
 
 app.post("/login", (req, res) => {
@@ -233,7 +252,11 @@ app.get("/dashboard", (req, res) => {
   if (req.session.loggedin) {
     db.all("SELECT * FROM users", [], (err, row) => {
       if (err) throw err;
-      res.render("pages/dashboard", { titulo: "DASHBOARD", dados: row, req: req });
+      res.render("pages/dashboard", {
+        titulo: "DASHBOARD",
+        dados: row,
+        req: req,
+      });
     });
   } else {
     console.log("Tentativa de acesso a àrea restrita");
@@ -241,9 +264,11 @@ app.get("/dashboard", (req, res) => {
   }
 });
 
-app.use('*', (req, res) => {
+app.use("*", (req, res) => {
   // Envia uma resposta de erro 404
-  res.status(404).render('pages/fail', { titulo: "ERRO 404", req: req, msg: "404" });
+  res
+    .status(404)
+    .render("pages/fail", { titulo: "ERRO 404", req: req, msg: "404" });
 });
 
 // app.listen() deve ser o último comando da aplicação (app.js)
